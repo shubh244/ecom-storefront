@@ -1,0 +1,66 @@
+================================================================================
+  DO ALG SITES — Next (Node) + Laravel (PHP) alag alag
+================================================================================
+
+Problem jo monorepo + ek account pe tha:
+  api.* subdomain bhi Next.js serve kar raha tha (x-powered-by: Next.js).
+  Isliye Laravel kabhi hit hi nahi hota tha.
+
+Solution:
+  1) Repo A → sirf Next.js  → Hostinger "Node / Git" website
+  2) Repo B → sirf Laravel   → Hostinger "PHP" website (doc root = public/)
+  3) Dono ko env se link karo
+
+--------------------------------------------------------------------------------
+STEP 1 — Split folders (PC pe)
+--------------------------------------------------------------------------------
+  cd furniture\furniture
+  powershell -ExecutionPolicy Bypass -File scripts\split-two-repos.ps1
+
+  Banenge:
+    furniture\shreejee-storefront
+    furniture\shreejee-api
+
+--------------------------------------------------------------------------------
+STEP 2 — GitHub pe 2 naye repos
+--------------------------------------------------------------------------------
+  Example:
+    github.com/shubh244/shreejee-storefront
+    github.com/shubh244/shreejee-api
+
+  Har folder me:
+    git init
+    git add .
+    git commit -m "Initial: split from monorepo"
+    git remote add origin https://github.com/shubh244/REPO_NAME.git
+    git branch -M main
+    git push -u origin main
+
+--------------------------------------------------------------------------------
+STEP 3 — Hostinger: PHP site (API)
+--------------------------------------------------------------------------------
+  - Naya website ya existing PHP plan — API domain (e.g. api.xxx.hostingersite.com)
+  - Git/FTP se shreejee-api upload
+  - Document root = .../public   (Laravel public folder)
+  - .env: DB_*, APP_URL, CORS_ALLOWED_ORIGINS = storefront URL
+  - phpMyAdmin: schema + data SQL import
+  - Test: https://api.../api/categories  → JSON
+
+--------------------------------------------------------------------------------
+STEP 4 — Hostinger: Node site (storefront)
+--------------------------------------------------------------------------------
+  - Alag website entry — storefront domain only
+  - Git connect shreejee-storefront
+  - Env:
+      NEXT_PUBLIC_SITE_URL=https://storefront-domain
+      NEXT_PUBLIC_API_URL=https://api-domain/api
+  - Redeploy build
+
+--------------------------------------------------------------------------------
+STEP 5 — Link check
+--------------------------------------------------------------------------------
+  Browser → storefront → F12 Network → products request
+  - URL must be api-domain (Laravel)
+  - Response JSON, NOT Next.js HTML
+
+================================================================================

@@ -1,0 +1,4 @@
+# Paste into Hostinger → Git (Next.js) → Environment variables → Redeploy
+
+NEXT_PUBLIC_SITE_URL=https://darkslategrey-gazelle-896289.hostingersite.com
+NEXT_PUBLIC_API_URL=https://api.darkslategrey-gazelle-896289.hostingersite.com/api
