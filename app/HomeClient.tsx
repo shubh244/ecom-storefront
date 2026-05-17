@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
+import HomeBrandBanner from '@/components/HomeBrandBanner'
 import PromoBanner from '@/components/PromoBanner'
 import CategoryBanner from '@/components/CategoryBanner'
 import StatsBanner from '@/components/StatsBanner'
@@ -81,6 +82,7 @@ export default function HomeClient() {
 
   return (
     <div className="overflow-x-hidden">
+      <HomeBrandBanner />
       {featuredSettled ? <Hero /> : <div className={heroHeightClass} aria-hidden />}
 
       {!featuredSettled ? <FeaturedSkeleton /> : <FeaturedProducts products={featuredProducts} />}
@@ -96,3 +98,5 @@ export default function HomeClient() {
     </div>
   )
 }
+
+
