@@ -120,7 +120,7 @@ export default function Header() {
               <img
                 src={logoSrc}
                 alt={`${SITE_NAME} logo`}
-                className="h-9 w-auto sm:h-12 shrink-0 object-contain"
+                className="h-9 w-auto sm:h-12 shrink-0 object-contain bg-transparent"
                 width={160}
                 height={48}
                 decoding="async"
