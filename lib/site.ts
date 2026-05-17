@@ -36,6 +36,7 @@ export function getLogoCandidates(): string[] {
     if (u && !ordered.includes(u)) ordered.push(u)
   }
   add(env)
+  add('/sjbw-logo.png')
   add(`${site}/sjbw-logo.png`)
   add('https://www.shreejeeblessingwood.in/sjbw-logo.png')
   add('https://shreejeeblessingwood.in/sjbw-logo.png')
@@ -43,12 +44,14 @@ export function getLogoCandidates(): string[] {
   return ordered
 }
 
-/** Absolute URL for Open Graph / JSON-LD logo fields. */
+/** Absolute URL for Open Graph / JSON-LD / favicon. */
 export function getOgImageUrl(): string {
+  const site = getSiteUrl()
   for (const u of getLogoCandidates()) {
     if (u.startsWith('http://') || u.startsWith('https://')) return u
+    if (u.startsWith('/')) return `${site}${u}`
   }
-  return `${getSiteUrl()}/brand-mark.svg`
+  return `${site}/sjbw-logo.png`
 }
 
 export const siteSeo = {

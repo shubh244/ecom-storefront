@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { FiEdit, FiTrash2, FiPlus, FiSearch, FiChevronLeft, FiChevronRight, FiImage } from 'react-icons/fi'
 import { Product, Category } from '@/lib/types'
 import { apiClient } from '@/lib/api'
+import { resolveProductImageUrl } from '@/lib/productImage'
 
 const PER_PAGE = 20
 
@@ -214,7 +215,7 @@ export default function AdminProducts() {
                       <div className="flex flex-col items-start gap-1.5">
                         <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center shrink-0">
                           {product.image ? (
-                            <img src={product.image} alt={product.name} className="w-full h-full object-cover rounded" />
+                            <img src={resolveProductImageUrl(product.image)} alt={product.name} className="w-full h-full object-cover rounded" />
                           ) : (
                             <span className="text-2xl">🪑</span>
                           )}
@@ -518,7 +519,7 @@ function ProductModal({ product, categories, onClose, onSave }: {
                   )}
                 </label>
                 {formData.image ? (
-                  <img src={formData.image} alt="" className="h-14 w-14 object-cover rounded border" />
+                  <img src={resolveProductImageUrl(formData.image)} alt="" className="h-14 w-14 object-cover rounded border" />
                 ) : pendingImageFile && !product ? (
                   <span className="text-xs text-gray-500">Preview available after save</span>
                 ) : null}

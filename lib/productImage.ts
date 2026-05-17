@@ -1,4 +1,15 @@
 import { Product } from '@/lib/types'
+import { getPublicApiUrl } from '@/lib/site'
+
+/** Product/admin image URLs from API (may be on another host). */
+export function resolveProductImageUrl(url: string | null | undefined): string {
+  if (!url?.trim()) return ''
+  const u = url.trim()
+  if (u.startsWith('http://') || u.startsWith('https://')) return u
+  const apiOrigin = getPublicApiUrl().replace(/\/api\/?$/, '')
+  if (u.startsWith('/')) return `${apiOrigin}${u}`
+  return u
+}
 
 const categoryFallbacks: Record<string, string[]> = {
   beds: [
@@ -28,7 +39,7 @@ const categoryFallbacks: Record<string, string[]> = {
 }
 
 export function getProductImage(product: Pick<Product, 'id' | 'image' | 'category'>): string {
-  if (product.image && product.image.trim() !== '') return product.image
+  if (product.image && product.image.trim() !== '') return resolveProductImageUrl(product.image)
 
   const slug = product.category?.slug ?? ''
   const options = categoryFallbacks[slug]

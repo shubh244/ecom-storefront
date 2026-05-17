@@ -50,6 +50,11 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
   },
   applicationName: SITE_NAME,
+  icons: {
+    icon: [{ url: '/sjbw-logo.png', type: 'image/png' }],
+    apple: [{ url: '/sjbw-logo.png', type: 'image/png' }],
+    shortcut: ['/sjbw-logo.png'],
+  },
   other: {
     'geo.region': 'IN-DL',
     'geo.placename': 'New Delhi',
