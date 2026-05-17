@@ -31,13 +31,15 @@ export function getPublicApiUrl(): string {
 export function getLogoCandidates(): string[] {
   const env = process.env.NEXT_PUBLIC_LOGO_URL?.trim()
   const site = getSiteUrl()
+  const apiOrigin = getPublicApiUrl().replace(/\/api\/?$/, '')
   const ordered: string[] = []
   const add = (u?: string) => {
     if (u && !ordered.includes(u)) ordered.push(u)
   }
   add(env)
-  add('/sjbw-logo.png')
   add(`${site}/sjbw-logo.png`)
+  add(`${apiOrigin}/sjbw-logo.png`)
+  add('/sjbw-logo.png')
   add('https://www.shreejeeblessingwood.in/sjbw-logo.png')
   add('https://shreejeeblessingwood.in/sjbw-logo.png')
   add('/brand-mark.svg')
