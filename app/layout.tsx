@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next'
+import Script from 'next/script'
 import './globals.css'
+import { cdnCacheBustScript } from '@/lib/cdnCacheBustScript'
 import Header from '@/components/Header'
 import AppFooter from '@/components/AppFooter'
 import WhatsAppButton from '@/components/WhatsAppButton'
@@ -88,6 +90,9 @@ export default function RootLayout({
   return (
     <html lang="en-IN">
       <body className="antialiased">
+        <Script id="cdn-cache-bust" strategy="beforeInteractive">
+          {cdnCacheBustScript}
+        </Script>
         <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
         <script dangerouslySetInnerHTML={{ __html: inlineHeadScripts }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />

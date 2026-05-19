@@ -1,9 +1,9 @@
 /**
- * Repairs stale CDN HTML that points at deleted /_next/static/css/*.css files.
- * Does not hide the page or remove working stylesheets (avoids breaking mobile refresh).
+ * Repairs stale CDN HTML: wrong /_next/static CSS + JS hashes (404, text/html MIME on .js).
  */
 export const inlineHeadScripts = `
 (function () {
+  var BUILD = '2';
   var PRIMARY_A = 'rgb(139, 69, 19)';
   var PRIMARY_B = 'rgb(139,69,19)';
 
@@ -17,6 +17,19 @@ export const inlineHeadScripts = `
     var c = window.getComputedStyle(el).color;
     el.remove();
     return c === PRIMARY_A || c === PRIMARY_B;
+  }
+
+  function parseWebpackHash(html) {
+    var m = html.match(/\\/_next\\/static\\/chunks\\/webpack-([a-f0-9]+)\\.js/);
+    return m ? m[1] : null;
+  }
+
+  function currentWebpackHash() {
+    var s = document.querySelector('script[src*="/_next/static/chunks/webpack-"]');
+    if (!s) return null;
+    var src = s.getAttribute('src') || '';
+    var m = src.match(/webpack-([a-f0-9]+)\\.js/);
+    return m ? m[1] : null;
   }
 
   function parseCssHref(html) {
@@ -35,7 +48,7 @@ export const inlineHeadScripts = `
     document.head.appendChild(link);
   }
 
-  function fetchFreshCss(done) {
+  function fetchFreshHtml(done) {
     var url = location.pathname + location.search;
     var sep = url.indexOf('?') >= 0 ? '&' : '?';
     fetch(url + sep + '_fresh_css=' + Date.now(), {
@@ -44,26 +57,54 @@ export const inlineHeadScripts = `
       headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
     })
       .then(function (r) { return r.text(); })
-      .then(function (html) { done(parseCssHref(html)); })
-      .catch(function () { done(null); });
+      .then(function (html) { done(html); })
+      .catch(function () { done(''); });
+  }
+
+  function reloadWithBust() {
+    try { sessionStorage.removeItem('sjbw_cdn_v'); } catch (e) {}
+    var q = location.search || '';
+    var sep = q.indexOf('?') >= 0 ? '&' : '?';
+    location.replace(location.pathname + q + sep + '__b=' + Date.now() + (location.hash || ''));
+  }
+
+  function markOk() {
+    try { sessionStorage.setItem('sjbw_cdn_v', BUILD); } catch (e) {}
   }
 
   function repair() {
-    if (tailwindOk()) return;
+    fetchFreshHtml(function (html) {
+      if (!html) return;
+      var freshWp = parseWebpackHash(html);
+      var curWp = currentWebpackHash();
+      if (freshWp && curWp && freshWp !== curWp) {
+        reloadWithBust();
+        return;
+      }
+      if (!tailwindOk()) addStylesheet(parseCssHref(html));
+      else markOk();
+    });
 
     document.querySelectorAll('link[rel="stylesheet"]').forEach(function (link) {
-      link.addEventListener(
-        'error',
-        function () {
-          fetchFreshCss(addStylesheet);
-        },
-        { once: true }
-      );
+      link.addEventListener('error', function () {
+        fetchFreshHtml(function (h) { addStylesheet(parseCssHref(h)); });
+      }, { once: true });
+    });
+
+    document.querySelectorAll('script[src*="/_next/static/chunks/"]').forEach(function (script) {
+      script.addEventListener('error', function () { reloadWithBust(); }, { once: true });
     });
 
     window.setTimeout(function () {
-      if (!tailwindOk()) fetchFreshCss(addStylesheet);
-    }, 500);
+      if (!tailwindOk()) {
+        fetchFreshHtml(function (h) {
+          if (parseCssHref(h)) addStylesheet(parseCssHref(h));
+          else reloadWithBust();
+        });
+      } else {
+        markOk();
+      }
+    }, 800);
   }
 
   if (document.readyState === 'loading') {
