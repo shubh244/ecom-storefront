@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  generateBuildId: async () => {
+    return process.env.BUILD_ID || `build-${Date.now()}`
+  },
   reactStrictMode: true,
   images: {
     remotePatterns: [

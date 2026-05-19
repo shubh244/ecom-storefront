@@ -16,6 +16,15 @@ export function middleware(request: NextRequest) {
   const response = NextResponse.next()
   const { pathname } = request.nextUrl
 
+  // Homepage is aggressively CDN-cached on Hostinger; force revalidation.
+  if (pathname === '/' || pathname === '') {
+    response.headers.set('Cache-Control', 'private, no-cache, no-store, max-age=0, must-revalidate')
+    response.headers.set('CDN-Cache-Control', 'no-store')
+    response.headers.set('Surrogate-Control', 'no-store')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+  }
+
   if (!isImmutableAsset(pathname)) {
     // Prevent CDN from serving year-old HTML that points at deleted CSS chunks after deploy.
     response.headers.set(

@@ -9,7 +9,6 @@ import { CartProvider } from '@/context/CartContext'
 import { ToastProvider } from '@/context/ToastContext'
 import { SITE_NAME, getSiteUrl, siteSeo, organizationJsonLd, getOgImageUrl } from '@/lib/site'
 import { criticalCss } from '@/lib/criticalCss'
-import CssRecovery from '@/components/CssRecovery'
 import { inlineHeadScripts } from '@/lib/inlineHeadScripts'
 
 const siteUrl = getSiteUrl()
@@ -88,18 +87,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en-IN">
-      <head>
-        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-        <meta httpEquiv="Pragma" content="no-cache" />
-        <meta httpEquiv="Expires" content="0" />
-      </head>
       <body className="antialiased">
         <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
         <script dangerouslySetInnerHTML={{ __html: inlineHeadScripts }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
         <ToastProvider>
           <CartProvider>
-            <CssRecovery />
             <Header />
             <AppMain>{children}</AppMain>
             <AppFooter />

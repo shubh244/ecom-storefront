@@ -4,6 +4,9 @@ import { SITE_NAME, getSiteUrl, siteSeo, getOgImageUrl } from '@/lib/site'
 
 const siteUrl = getSiteUrl()
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export const metadata: Metadata = {
   title: { absolute: siteSeo.homeTitle },
   description: siteSeo.homeDescription,
