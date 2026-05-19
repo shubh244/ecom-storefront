@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { QRCodeSVG } from 'qrcode.react'
@@ -14,6 +14,14 @@ import { SITE_NAME } from '@/lib/site'
 const UpiQrScanner = dynamic(() => import('@/components/UpiQrScanner'), { ssr: false })
 
 type CheckoutStep = 'form' | 'payment'
+type PaymentMethodChoice = 'razorpay' | 'upi'
+
+interface PaymentConfig {
+  razorpay_enabled: boolean
+  razorpay_key_id: string | null
+  upi_vpa: string
+  upi_merchant_name: string
+}
 
 interface PlacedCheckout {
   order: {
@@ -52,6 +60,8 @@ export default function CheckoutPage() {
   const [screenshotUploading, setScreenshotUploading] = useState(false)
   const [screenshotUrls, setScreenshotUrls] = useState<string[]>([])
   const [razorpayLoading, setRazorpayLoading] = useState(false)
+  const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodChoice>('razorpay')
 
   const [formData, setFormData] = useState({
     customer_name: '',
@@ -66,6 +76,55 @@ export default function CheckoutPage() {
   const shippingCost = subtotal > 20000 ? 0 : 500
   const total = subtotal + tax + shippingCost
 
+  const publicRazorpayKey =
+    typeof process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID === 'string'
+      ? process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID.trim()
+      : ''
+  const razorpayAvailable =
+    !!paymentConfig?.razorpay_enabled || !!publicRazorpayKey
+
+  useEffect(() => {
+    let cancelled = false
+    void apiClient
+      .getPaymentConfig()
+      .then((cfg) => {
+        if (cancelled) return
+        setPaymentConfig(cfg)
+        if (!cfg.razorpay_enabled) {
+          setPaymentMethod('upi')
+        }
+      })
+      .catch(() => {
+        if (!cancelled && publicRazorpayKey) {
+          setPaymentConfig({
+            razorpay_enabled: true,
+            razorpay_key_id: publicRazorpayKey,
+            upi_vpa: '',
+            upi_merchant_name: '',
+          })
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [publicRazorpayKey])
+
+  function resolveRazorpayEnabled(
+    data: {
+      razorpay_enabled?: boolean
+      payment_method?: string
+      payment?: { method?: string }
+    },
+    chosen: PaymentMethodChoice
+  ): boolean {
+    if (data.razorpay_enabled === true) return true
+    if (data.payment_method === 'razorpay' || data.payment?.method === 'razorpay') {
+      return true
+    }
+    if (data.razorpay_enabled === false) return false
+    return chosen === 'razorpay' && razorpayAvailable
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -77,6 +136,7 @@ export default function CheckoutPage() {
           product_id: parseInt(item.id, 10),
           quantity: item.quantity,
         })),
+        ...(razorpayAvailable ? { payment_method: paymentMethod } : {}),
       }
 
       const data = await apiClient.createOrder(orderData)
@@ -86,7 +146,7 @@ export default function CheckoutPage() {
         return
       }
 
-      const razorpayEnabled = !!data.razorpay_enabled
+      const razorpayEnabled = resolveRazorpayEnabled(data, paymentMethod)
       setPlaced({
         order: data.order,
         razorpay_enabled: razorpayEnabled,
@@ -103,7 +163,16 @@ export default function CheckoutPage() {
       )
     } catch (error) {
       console.error('Error placing order:', error)
-      showToast('Error placing order. Please try again.', 'error')
+      const msg = error instanceof Error ? error.message : ''
+      if (msg.includes('503') && msg.toLowerCase().includes('razorpay')) {
+        showToast(
+          'Razorpay is not set up on the server yet. Choose UPI or contact support.',
+          'error'
+        )
+        setPaymentMethod('upi')
+      } else {
+        showToast('Error placing order. Please try again.', 'error')
+      }
     } finally {
       setLoading(false)
     }
@@ -115,7 +184,7 @@ export default function CheckoutPage() {
   }
 
   const payWithRazorpay = async () => {
-    if (!placed?.razorpay_enabled) return
+    if (!placed) return
     setRazorpayLoading(true)
     try {
       const scriptOk = await loadRazorpayScript()
@@ -235,6 +304,7 @@ export default function CheckoutPage() {
   }
 
   if (step === 'payment' && placed) {
+    const showRazorpay = placed.razorpay_enabled || razorpayAvailable
     const screenshotBlock = (
       <div className="rounded-lg border border-dashed border-gray-300 p-4">
         <h3 className="text-sm font-semibold text-gray-800 mb-2">Upload payment screenshot (optional)</h3>
@@ -271,7 +341,7 @@ export default function CheckoutPage() {
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="container mx-auto px-4 max-w-3xl">
           <h1 className="text-3xl font-bold mb-2">
-            {placed.razorpay_enabled ? 'Complete payment' : 'Pay with UPI'}
+            {showRazorpay ? 'Complete payment' : 'Pay with UPI'}
           </h1>
           <p className="text-gray-600 text-sm mb-6">
             Order <span className="font-mono font-semibold">{placed.order.order_number}</span>{' '}
@@ -280,11 +350,11 @@ export default function CheckoutPage() {
           </p>
 
           <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
-            {placed.razorpay_enabled ? (
+            {showRazorpay ? (
               <>
                 <p className="text-sm text-gray-600">
-                  Pay with <strong>Razorpay</strong> — same secure checkout flow as our main store (UPI, cards,
-                  netbanking, wallets). Your payment is verified automatically when it succeeds.
+                  Pay with <strong>Razorpay</strong> — UPI, cards, netbanking, and wallets. Payment is verified
+                  automatically when it succeeds.
                 </p>
                 <button
                   type="button"
@@ -294,6 +364,20 @@ export default function CheckoutPage() {
                 >
                   {razorpayLoading ? 'Preparing checkout…' : `Pay ₹${Number(placed.amount).toLocaleString()} with Razorpay`}
                 </button>
+                {placed.upi_pay_url && (
+                  <p className="text-center text-xs text-gray-500">
+                    Prefer manual UPI?{' '}
+                    <button
+                      type="button"
+                      className="text-primary underline"
+                      onClick={() =>
+                        setPlaced((p) => (p ? { ...p, razorpay_enabled: false } : p))
+                      }
+                    >
+                      Show UPI QR instead
+                    </button>
+                  </p>
+                )}
                 {screenshotBlock}
               </>
             ) : (
@@ -332,6 +416,17 @@ export default function CheckoutPage() {
                 </button>
 
                 {screenshotBlock}
+
+                {razorpayAvailable && (
+                  <button
+                    type="button"
+                    onClick={payWithRazorpay}
+                    disabled={razorpayLoading}
+                    className="w-full border-2 border-primary text-primary py-3 rounded-lg font-semibold hover:bg-primary/5 disabled:opacity-50"
+                  >
+                    {razorpayLoading ? 'Preparing…' : 'Pay with Razorpay instead'}
+                  </button>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -452,12 +547,52 @@ export default function CheckoutPage() {
                   />
                 </div>
 
+                {razorpayAvailable && (
+                  <fieldset className="rounded-lg border border-gray-200 p-4 space-y-3">
+                    <legend className="text-sm font-semibold text-gray-800 px-1">Payment method</legend>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="payment_method"
+                        checked={paymentMethod === 'razorpay'}
+                        onChange={() => setPaymentMethod('razorpay')}
+                        className="mt-1"
+                      />
+                      <span>
+                        <span className="font-medium text-gray-900">Razorpay</span>
+                        <span className="block text-xs text-gray-500">
+                          UPI, cards, netbanking — recommended
+                        </span>
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="payment_method"
+                        checked={paymentMethod === 'upi'}
+                        onChange={() => setPaymentMethod('upi')}
+                        className="mt-1"
+                      />
+                      <span>
+                        <span className="font-medium text-gray-900">Manual UPI QR</span>
+                        <span className="block text-xs text-gray-500">
+                          Scan QR and confirm payment yourself
+                        </span>
+                      </span>
+                    </label>
+                  </fieldset>
+                )}
+
                 <button
                   type="submit"
                   disabled={loading}
                   className="w-full bg-primary hover:bg-secondary text-white py-3 rounded-lg font-semibold text-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Placing Order...' : 'Place order & pay'}
+                  {loading
+                    ? 'Placing Order...'
+                    : paymentMethod === 'razorpay' && razorpayAvailable
+                      ? 'Place order & pay with Razorpay'
+                      : 'Place order & pay'}
                 </button>
               </form>
             </div>

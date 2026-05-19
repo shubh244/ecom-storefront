@@ -37,6 +37,8 @@ export default function CssRecovery() {
       window.setTimeout(() => {
         if (tailwindApplied()) {
           document.documentElement.classList.add('css-ready')
+        } else {
+          document.documentElement.classList.remove('css-ready')
         }
       }, 500)
     }

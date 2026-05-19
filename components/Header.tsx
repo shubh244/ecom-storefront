@@ -4,12 +4,12 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { FiMenu, FiX, FiShoppingCart, FiUser, FiHeart, FiSearch } from 'react-icons/fi'
 import { categories } from '@/lib/data'
-import { SITE_NAME, getLogoCandidates } from '@/lib/site'
+import { SITE_NAME, getHeaderLogoCandidates } from '@/lib/site'
 import { useCart } from '@/context/CartContext'
 import CartModal from './CartModal'
 
 export default function Header() {
-  const logoCandidates = useMemo(() => getLogoCandidates(), [])
+  const logoCandidates = useMemo(() => getHeaderLogoCandidates(), [])
   const [logoIndex, setLogoIndex] = useState(0)
   const logoSrc = logoCandidates[logoIndex] ?? '/brand-mark.svg'
 
@@ -117,18 +117,21 @@ export default function Header() {
               {isMenuOpen ? <FiX /> : <FiMenu />}
             </button>
             <a href="/" className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <img
-                src={logoSrc}
-                alt={`${SITE_NAME} logo`}
-                width={48}
-                height={48}
-                className="h-9 w-auto sm:h-12 shrink-0"
-                loading="lazy"
-                decoding="async"
-                onError={() =>
-                  setLogoIndex((i: number) => (i + 1 < logoCandidates.length ? i + 1 : i))
-                }
-              />
+              <span className="flex h-9 w-9 sm:h-12 sm:w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-gray-200">
+                <img
+                  src={logoSrc}
+                  alt={`${SITE_NAME} logo`}
+                  width={48}
+                  height={48}
+                  className="h-full w-full object-contain"
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority="high"
+                  onError={() =>
+                    setLogoIndex((i: number) => (i + 1 < logoCandidates.length ? i + 1 : i))
+                  }
+                />
+              </span>
               <span className="text-lg sm:text-2xl font-bold text-primary hidden sm:block truncate max-w-[10rem] md:max-w-none">
                 {SITE_NAME}
               </span>

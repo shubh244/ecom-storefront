@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next'
-import Script from 'next/script'
 import './globals.css'
 import Header from '@/components/Header'
 import AppFooter from '@/components/AppFooter'
@@ -80,6 +79,7 @@ export const viewport: Viewport = {
 }
 
 export const revalidate = 0
+export const dynamic = 'force-dynamic'
 
 export default function RootLayout({
   children,
@@ -88,11 +88,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en-IN">
+      <head>
+        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta httpEquiv="Pragma" content="no-cache" />
+        <meta httpEquiv="Expires" content="0" />
+      </head>
       <body className="antialiased">
         <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
-        <Script id="css-bootstrap" strategy="beforeInteractive">
-          {inlineHeadScripts}
-        </Script>
+        <script dangerouslySetInnerHTML={{ __html: inlineHeadScripts }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
         <ToastProvider>
           <CartProvider>

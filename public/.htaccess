@@ -8,12 +8,21 @@
 </IfModule>
 
 <IfModule mod_headers.c>
-  # HTML: never cache 1 year at CDN (stale HTML → wrong /_next/static/css hash → no styles)
+  # HTML + extensionless routes (Next.js) — never CDN-cache stale HTML
   <FilesMatch "\.(html|htm)$">
-    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
     Header set Pragma "no-cache"
     Header set Expires "0"
+    Header set CDN-Cache-Control "no-store"
   </FilesMatch>
+
+  # Default document responses (Hostinger hCDN often ignores Next headers)
+  <If "%{REQUEST_URI} =~ m#^/$# || %{REQUEST_URI} =~ m#^/[^.]*$#">
+    Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
+    Header set CDN-Cache-Control "no-store"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </If>
 
   <FilesMatch "\.css$">
     Header set Content-Type "text/css; charset=UTF-8"

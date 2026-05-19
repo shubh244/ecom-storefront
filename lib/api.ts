@@ -270,8 +270,22 @@ class ApiClient {
     })
   }
 
+  // Payment
+  async getPaymentConfig() {
+    return this.request<{
+      razorpay_enabled: boolean
+      razorpay_key_id: string | null
+      upi_vpa: string
+      upi_merchant_name: string
+    }>('/payment/config')
+  }
+
   // Orders
-  async createOrder(orderData: any) {
+  async createOrder(
+    orderData: Record<string, unknown> & {
+      payment_method?: 'razorpay' | 'upi'
+    }
+  ) {
     return this.request<any>('/orders', {
       method: 'POST',
       body: JSON.stringify(orderData),

@@ -26,8 +26,33 @@ export const inlineHeadScripts = `
     } catch (e) {}
   }
 
+  function showCssBlockedMessage() {
+    if (document.getElementById('sjbw-css-blocked')) return;
+    var box = document.createElement('div');
+    box.id = 'sjbw-css-blocked';
+    box.setAttribute('role', 'alert');
+    box.style.cssText =
+      'position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;background:#fff;font-family:system-ui,sans-serif;text-align:center';
+    box.innerHTML =
+      '<div><p style="margin:0 0 12px;font-size:18px;font-weight:600;color:#1a1a1a">Loading styles…</p>' +
+      '<p style="margin:0 0 16px;font-size:14px;color:#555">If this stays blank, tap below.</p>' +
+      '<button type="button" style="padding:12px 20px;border:0;border-radius:8px;background:#8B4513;color:#fff;font-size:16px;font-weight:600">Reload page</button></div>';
+    box.querySelector('button').addEventListener('click', function () {
+      try {
+        sessionStorage.removeItem(RELOAD_KEY);
+      } catch (e) {}
+      var u = location.pathname + location.search;
+      location.replace(u + (u.indexOf('?') >= 0 ? '&' : '?') + '_css=' + Date.now());
+    });
+    (document.body || document.documentElement).appendChild(box);
+  }
+
   function tryReload(reason) {
     if (reloadCount() >= MAX_RELOADS) {
+      if (!tailwindLoaded()) {
+        showCssBlockedMessage();
+        return;
+      }
       markCssReady();
       return;
     }
@@ -153,17 +178,23 @@ export const inlineHeadScripts = `
   });
 
   window.addEventListener('pageshow', function (event) {
-    if (event.persisted) {
-      ensureCss('bfcache');
+    ensureCss(event.persisted ? 'bfcache' : 'refresh');
+    if (event.persisted || !tailwindLoaded()) {
       reinjectStylesheets();
-      setTimeout(function () {
-        if (tailwindLoaded()) {
-          markCssReady();
-        } else {
-          tryReload('bfcache');
-        }
-      }, 200);
     }
+    setTimeout(function () {
+      if (tailwindLoaded()) {
+        markCssReady();
+      } else if (event.persisted) {
+        tryReload('bfcache');
+      } else {
+        reinjectStylesheets();
+        setTimeout(function () {
+          if (tailwindLoaded()) markCssReady();
+          else tryReload('refresh');
+        }, 1200);
+      }
+    }, event.persisted ? 200 : 100);
   });
 
   window.addEventListener('popstate', function () {

@@ -28,6 +28,13 @@ export function getPublicApiUrl(): string {
  * Logo image URLs to try in order (remote hosting can break after DNS moves).
  * Set NEXT_PUBLIC_LOGO_URL to a stable URL if needed.
  */
+/** Header logo — SVG only (avoids black rectangle from legacy PNG). */
+export function getHeaderLogoCandidates(): string[] {
+  const env = process.env.NEXT_PUBLIC_LOGO_URL?.trim()
+  if (env && /\.(svg|webp)$/i.test(env)) return [env]
+  return ['/brand-mark.svg']
+}
+
 export function getLogoCandidates(): string[] {
   const env = process.env.NEXT_PUBLIC_LOGO_URL?.trim()
   const site = getSiteUrl()
