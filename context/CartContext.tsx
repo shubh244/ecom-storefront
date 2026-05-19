@@ -23,6 +23,8 @@ interface CartItem extends CartProduct {
 
 interface CartContextType {
   cart: CartItem[]
+  /** False until cart has been read from localStorage (avoids empty-cart flash on /checkout). */
+  isReady: boolean
   addToCart: (product: CartProduct) => void
   removeFromCart: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
@@ -35,6 +37,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([])
+  const [isReady, setIsReady] = useState(false)
   const { showToast } = useToast()
 
   // Load cart from localStorage on mount
@@ -47,6 +50,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         console.error('Error loading cart from localStorage:', error)
       }
     }
+    setIsReady(true)
   }, [])
 
   // Save cart to localStorage whenever it changes
@@ -105,6 +109,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     <CartContext.Provider
       value={{
         cart,
+        isReady,
         addToCart,
         removeFromCart,
         updateQuantity,

@@ -271,13 +271,22 @@ class ApiClient {
   }
 
   // Payment
-  async getPaymentConfig() {
-    return this.request<{
-      razorpay_enabled: boolean
-      razorpay_key_id: string | null
-      upi_vpa: string
-      upi_merchant_name: string
-    }>('/payment/config')
+  async getPaymentConfig(): Promise<{
+    razorpay_enabled: boolean
+    razorpay_key_id: string | null
+    upi_vpa: string
+    upi_merchant_name: string
+  } | null> {
+    try {
+      return await this.request<{
+        razorpay_enabled: boolean
+        razorpay_key_id: string | null
+        upi_vpa: string
+        upi_merchant_name: string
+      }>('/payment/config')
+    } catch {
+      return null
+    }
   }
 
   // Orders

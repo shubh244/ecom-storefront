@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { QRCodeSVG } from 'qrcode.react'
@@ -49,7 +49,7 @@ function loadRazorpayScript(): Promise<boolean> {
 }
 
 export default function CheckoutPage() {
-  const { cart, getTotalPrice, clearCart } = useCart()
+  const { cart, isReady, getTotalPrice, clearCart } = useCart()
   const { showToast } = useToast()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -61,7 +61,9 @@ export default function CheckoutPage() {
   const [screenshotUrls, setScreenshotUrls] = useState<string[]>([])
   const [razorpayLoading, setRazorpayLoading] = useState(false)
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null)
+  const [apiRazorpayReady, setApiRazorpayReady] = useState<boolean | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodChoice>('razorpay')
+  const autoRazorpayRef = useRef(false)
 
   const [formData, setFormData] = useState({
     customer_name: '',
@@ -80,30 +82,29 @@ export default function CheckoutPage() {
     typeof process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID === 'string'
       ? process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID.trim()
       : ''
-  const razorpayAvailable =
-    !!paymentConfig?.razorpay_enabled || !!publicRazorpayKey
+  const preferRazorpay = paymentMethod === 'razorpay'
+  const razorpayUiReady =
+    apiRazorpayReady !== false || !!paymentConfig?.razorpay_enabled || !!publicRazorpayKey
 
   useEffect(() => {
     let cancelled = false
-    void apiClient
-      .getPaymentConfig()
-      .then((cfg) => {
-        if (cancelled) return
+    void apiClient.getPaymentConfig().then((cfg) => {
+      if (cancelled) return
+      if (cfg) {
         setPaymentConfig(cfg)
-        if (!cfg.razorpay_enabled) {
-          setPaymentMethod('upi')
-        }
-      })
-      .catch(() => {
-        if (!cancelled && publicRazorpayKey) {
-          setPaymentConfig({
-            razorpay_enabled: true,
-            razorpay_key_id: publicRazorpayKey,
-            upi_vpa: '',
-            upi_merchant_name: '',
-          })
-        }
-      })
+        setApiRazorpayReady(cfg.razorpay_enabled)
+        return
+      }
+      setApiRazorpayReady(null)
+      if (publicRazorpayKey) {
+        setPaymentConfig({
+          razorpay_enabled: true,
+          razorpay_key_id: publicRazorpayKey,
+          upi_vpa: '',
+          upi_merchant_name: '',
+        })
+      }
+    })
     return () => {
       cancelled = true
     }
@@ -122,83 +123,29 @@ export default function CheckoutPage() {
       return true
     }
     if (data.razorpay_enabled === false) return false
-    return chosen === 'razorpay' && razorpayAvailable
+    return chosen === 'razorpay'
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-
-    try {
-      const orderData = {
-        ...formData,
-        items: cart.map((item) => ({
-          product_id: parseInt(item.id, 10),
-          quantity: item.quantity,
-        })),
-        ...(razorpayAvailable ? { payment_method: paymentMethod } : {}),
-      }
-
-      const data = await apiClient.createOrder(orderData)
-
-      if (!data?.order) {
-        showToast('Failed to place order. Please try again.', 'error')
-        return
-      }
-
-      const razorpayEnabled = resolveRazorpayEnabled(data, paymentMethod)
-      setPlaced({
-        order: data.order,
-        razorpay_enabled: razorpayEnabled,
-        upi_pay_url: data.upi_pay_url,
-        merchant_upi_vpa: data.merchant_upi_vpa,
-        amount: data.order.total_amount ?? total,
-      })
-      setStep('payment')
-      showToast(
-        razorpayEnabled
-          ? 'Order created. Pay securely with Razorpay (UPI, cards, netbanking).'
-          : 'Order created. Complete UPI payment to finish.',
-        'success'
-      )
-    } catch (error) {
-      console.error('Error placing order:', error)
-      const msg = error instanceof Error ? error.message : ''
-      if (msg.includes('503') && msg.toLowerCase().includes('razorpay')) {
-        showToast(
-          'Razorpay is not set up on the server yet. Choose UPI or contact support.',
-          'error'
-        )
-        setPaymentMethod('upi')
-      } else {
-        showToast('Error placing order. Please try again.', 'error')
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const openUpi = () => {
-    if (!placed?.upi_pay_url) return
-    window.location.href = placed.upi_pay_url
-  }
-
-  const payWithRazorpay = async () => {
+  const payWithRazorpay = useCallback(async () => {
     if (!placed) return
     setRazorpayLoading(true)
     try {
       const scriptOk = await loadRazorpayScript()
       if (!scriptOk) {
         showToast('Could not load Razorpay. Check your connection and try again.', 'error')
-        setRazorpayLoading(false)
         return
       }
 
       const checkout = await apiClient.createRazorpayCheckoutOrder(placed.order.id)
       const orderIdForVerify = placed.order.id
+      const keyId = checkout.key_id || paymentConfig?.razorpay_key_id || publicRazorpayKey
+      if (!keyId) {
+        showToast('Razorpay key missing. Add keys to API .env (public_html/api/.env).', 'error')
+        return
+      }
 
       const rzp = new window.Razorpay({
-        key: checkout.key_id,
+        key: keyId,
         amount: checkout.amount,
         currency: checkout.currency,
         order_id: checkout.order_id,
@@ -240,12 +187,104 @@ export default function CheckoutPage() {
       })
 
       rzp.open()
-      setRazorpayLoading(false)
     } catch (e) {
       console.error(e)
-      showToast(e instanceof Error ? e.message : 'Could not start payment.', 'error')
+      const msg = e instanceof Error ? e.message : 'Could not start payment.'
+      if (msg.toLowerCase().includes('razorpay') && msg.toLowerCase().includes('configured')) {
+        showToast(
+          'Razorpay keys not loaded on API. Put RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in public_html/api/.env, then run: php artisan config:clear',
+          'error'
+        )
+        setPlaced((p) => (p ? { ...p, razorpay_enabled: false } : p))
+      } else {
+        showToast(msg, 'error')
+      }
+    } finally {
       setRazorpayLoading(false)
     }
+  }, [
+    placed,
+    paymentConfig?.razorpay_key_id,
+    publicRazorpayKey,
+    showToast,
+    clearCart,
+    router,
+  ])
+
+  useEffect(() => {
+    if (step !== 'payment' || !placed || !autoRazorpayRef.current) return
+    autoRazorpayRef.current = false
+    const t = window.setTimeout(() => {
+      void payWithRazorpay()
+    }, 100)
+    return () => window.clearTimeout(t)
+  }, [step, placed, payWithRazorpay])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      const orderData = {
+        ...formData,
+        items: cart.map((item) => ({
+          product_id: parseInt(item.id, 10),
+          quantity: item.quantity,
+        })),
+        payment_method: paymentMethod,
+      }
+
+      const data = await apiClient.createOrder(orderData)
+
+      if (!data?.order) {
+        showToast('Failed to place order. Please try again.', 'error')
+        return
+      }
+
+      const razorpayEnabled = resolveRazorpayEnabled(data, paymentMethod)
+      const placedOrder: PlacedCheckout = {
+        order: data.order,
+        razorpay_enabled: razorpayEnabled,
+        upi_pay_url: data.upi_pay_url,
+        merchant_upi_vpa: data.merchant_upi_vpa,
+        amount: data.order.total_amount ?? total,
+      }
+      setPlaced(placedOrder)
+      setStep('payment')
+
+      if (preferRazorpay) {
+        autoRazorpayRef.current = true
+        if (!razorpayEnabled) {
+          showToast(
+            'Order created. Opening Razorpay… (If QR appears, API keys need to be in public_html/api/.env)',
+            'success'
+          )
+        } else {
+          showToast('Order created. Opening Razorpay checkout…', 'success')
+        }
+      } else {
+        showToast('Order created. Complete UPI payment to finish.', 'success')
+      }
+    } catch (error) {
+      console.error('Error placing order:', error)
+      const msg = error instanceof Error ? error.message : ''
+      if (msg.includes('503') && msg.toLowerCase().includes('razorpay')) {
+        showToast(
+          'Razorpay is not set up on the server yet. Choose UPI or contact support.',
+          'error'
+        )
+        setPaymentMethod('upi')
+      } else {
+        showToast('Error placing order. Please try again.', 'error')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const openUpi = () => {
+    if (!placed?.upi_pay_url) return
+    window.location.href = placed.upi_pay_url
   }
 
   const reportPayment = async (status: 'success' | 'failed') => {
@@ -271,12 +310,24 @@ export default function CheckoutPage() {
     }
   }
 
+  if (!isReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-gray-600">Loading checkout…</p>
+      </div>
+    )
+  }
+
   if (cart.length === 0 && step === 'form') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center px-4">
           <h1 className="text-3xl font-bold mb-4">Your cart is empty</h1>
-          <Link href="/" className="text-primary hover:underline">
+          <p className="text-gray-600 mb-6 text-sm">Add items to your cart before checkout.</p>
+          <Link
+            href="/"
+            className="inline-block bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-secondary"
+          >
             Continue Shopping
           </Link>
         </div>
@@ -304,7 +355,7 @@ export default function CheckoutPage() {
   }
 
   if (step === 'payment' && placed) {
-    const showRazorpay = placed.razorpay_enabled || razorpayAvailable
+    const showRazorpay = preferRazorpay && (placed.razorpay_enabled || razorpayUiReady)
     const screenshotBlock = (
       <div className="rounded-lg border border-dashed border-gray-300 p-4">
         <h3 className="text-sm font-semibold text-gray-800 mb-2">Upload payment screenshot (optional)</h3>
@@ -417,16 +468,14 @@ export default function CheckoutPage() {
 
                 {screenshotBlock}
 
-                {razorpayAvailable && (
-                  <button
-                    type="button"
-                    onClick={payWithRazorpay}
-                    disabled={razorpayLoading}
-                    className="w-full border-2 border-primary text-primary py-3 rounded-lg font-semibold hover:bg-primary/5 disabled:opacity-50"
-                  >
-                    {razorpayLoading ? 'Preparing…' : 'Pay with Razorpay instead'}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => void payWithRazorpay()}
+                  disabled={razorpayLoading}
+                  className="w-full border-2 border-primary text-primary py-3 rounded-lg font-semibold hover:bg-primary/5 disabled:opacity-50"
+                >
+                  {razorpayLoading ? 'Preparing…' : 'Pay with Razorpay instead'}
+                </button>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -547,9 +596,15 @@ export default function CheckoutPage() {
                   />
                 </div>
 
-                {razorpayAvailable && (
-                  <fieldset className="rounded-lg border border-gray-200 p-4 space-y-3">
-                    <legend className="text-sm font-semibold text-gray-800 px-1">Payment method</legend>
+                <fieldset className="rounded-lg border border-gray-200 p-4 space-y-3">
+                  <legend className="text-sm font-semibold text-gray-800 px-1">Payment method</legend>
+                  {apiRazorpayReady === false && (
+                    <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      Razorpay is not active on the API yet. Add keys to{' '}
+                      <strong>public_html/api/.env</strong> and run{' '}
+                      <code className="text-[11px]">php artisan config:clear</code>.
+                    </p>
+                  )}
                     <label className="flex items-start gap-3 cursor-pointer">
                       <input
                         type="radio"
@@ -580,19 +635,18 @@ export default function CheckoutPage() {
                         </span>
                       </span>
                     </label>
-                  </fieldset>
-                )}
+                </fieldset>
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || razorpayLoading}
                   className="w-full bg-primary hover:bg-secondary text-white py-3 rounded-lg font-semibold text-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading
-                    ? 'Placing Order...'
-                    : paymentMethod === 'razorpay' && razorpayAvailable
+                  {loading || razorpayLoading
+                    ? 'Processing…'
+                    : preferRazorpay
                       ? 'Place order & pay with Razorpay'
-                      : 'Place order & pay'}
+                      : 'Place order & pay with UPI'}
                 </button>
               </form>
             </div>
