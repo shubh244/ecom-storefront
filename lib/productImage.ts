@@ -1,7 +1,6 @@
 import { Product } from '@/lib/types'
 import { getPublicApiUrl } from '@/lib/site'
 
-/** Product/admin image URLs from API (may be on another host). */
 export function resolveProductImageUrl(url: string | null | undefined): string {
   if (!url?.trim()) return ''
   const u = url.trim()

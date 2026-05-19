@@ -1,0 +1,68 @@
+OPTION A — Point API subdomain to main site Laravel (5 minutes)
+================================================================
+
+GOAL
+  api.darkslategrey-gazelle-896289.hostingersite.com
+  must use folder:
+  .../public_html/api/public
+  (folder that contains index.php + .htaccess)
+
+STEP 1 — Confirm Laravel files exist (File Manager)
+  Path: domains → darkslategrey-gazelle-896289.hostingersite.com → public_html → api
+
+  You MUST see:
+    api/artisan
+    api/app/
+    api/public/index.php
+    api/public/.htaccess
+    api/.env  (create from scripts/hostinger-api.env.example if missing)
+
+  If api/ is empty: upload backend_new-deploy.zip into public_html, extract so api/ has artisan.
+
+STEP 2 — Change subdomain document root (hPanel)
+  1. hPanel → Websites → Manage
+  2. Domains → Subdomains (or "Subdomains" under Domain)
+  3. Find: api.darkslategrey-gazelle-896289.hostingersite.com → Edit / Manage
+  4. Document root / Website directory — set to EXACTLY:
+
+     public_html/api/public
+
+     OR full path (if Hostinger asks for full path):
+
+     /home/u274811071/domains/darkslategrey-gazelle-896289.hostingersite.com/public_html/api/public
+
+  5. Save. Wait 1–2 minutes.
+
+STEP 3 — Quick tests (browser)
+  A) https://api.darkslategrey-gazelle-896289.hostingersite.com/test.php
+     → should show: API public folder OK
+     (delete test.php after)
+
+  B) https://api.darkslategrey-gazelle-896289.hostingersite.com/
+     → JSON from Laravel
+
+  C) https://api.darkslategrey-gazelle-896289.hostingersite.com/api/health
+     → {"success":true,"status":"ok"}
+
+  D) https://api.darkslategrey-gazelle-896289.hostingersite.com/api/categories
+     → JSON list (needs DB import done)
+
+STEP 4 — If still 404 after Step 2
+  • Subdomain may have its OWN empty folder under:
+    domains/api.darkslategrey-gazelle-896289.hostingersite.com/public_html
+    Ignore that folder for Option A — only change document root to main site's api/public.
+  • Enable SSL for api subdomain (hPanel → SSL)
+  • Clear browser cache / try incognito
+
+STEP 5 — SSH (only if B or C fail with 500)
+  ssh -p 65002 u274811071@93.127.208.1
+  cd ~/domains/darkslategrey-gazelle-896289.hostingersite.com/public_html/api
+  composer install --no-dev --optimize-autoloader
+  php artisan config:clear
+
+STEP 6 — Storefront env (Git deploy)
+  NEXT_PUBLIC_API_URL=https://api.darkslategrey-gazelle-896289.hostingersite.com/api
+  NEXT_PUBLIC_SITE_URL=https://darkslategrey-gazelle-896289.hostingersite.com
+  → Redeploy
+
+DB (if not done): import hostinger-schema.sql then hostinger-data.sql in phpMyAdmin.

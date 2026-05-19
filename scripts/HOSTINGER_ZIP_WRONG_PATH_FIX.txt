@@ -1,0 +1,76 @@
+URGENT FIX: Files named `public\test.php` instead of folder `public/`
+==============================================================================
+
+YOUR SCREENSHOT SHOWS WINDOWS-STYLE NAMES IN LINUX (wrong).
+
+Wrong (what you have now — one long filename each):
+  public\test.php
+  public\index.php
+  public\.htaccess
+  resources\css\app.css
+
+Correct (folders + files):
+  public/test.php
+  public/index.php
+  public/.htaccess
+  resources/css/app.css
+
+The server looks for REAL folder "public/" — it cannot find literal "public\anything".
+
+------------------------------------------------------------------------------
+OPTION A — FAST FIX (recommended): delete api + re-upload correctly
+------------------------------------------------------------------------------
+
+1) File Manager → public_html/api → DELETE ALL FILES inside api (confirm empty).
+
+2) On your PC, create a LINUX-FRIENDLY archive (tar.gz avoids this bug):
+
+   PowerShell:
+   cd "...\furniture"
+   .\scripts\pack-api-tar-hostinger.ps1
+
+   This creates: backend_new-deploy.tar.gz
+
+3) Upload backend_new-deploy.tar.gz to public_html/api/
+
+4) Hostinger File Manager → right-click .tar.gz → Extract
+   (If extract not available for .tar.gz, use SSH below.)
+
+5) After extract you MUST see a real FOLDER named "public" containing index.php — NOT filenames with backslashes.
+
+------------------------------------------------------------------------------
+OPTION B — SSH extract (always correct folders)
+------------------------------------------------------------------------------
+
+Upload backend_new-deploy.zip OR .tar.gz to public_html/api/
+
+SSH:
+  cd ~/domains/darkslategrey-gazelle-896289.hostingersite.com/public_html/api
+
+  unzip -o backend_new-deploy.zip
+  OR
+  tar -xzf backend_new-deploy.tar.gz
+
+------------------------------------------------------------------------------
+OPTION C — FileZilla (no zip on server): upload unpacked folder
+------------------------------------------------------------------------------
+
+Use FileZilla. On PC open folder:
+  backend_new/
+
+Drag ALL contents (app, artisan, bootstrap, config, public, routes, ...)
+into server's public_html/api/
+
+Check on server: public/ is a FOLDER — open it → index.php exists.
+
+------------------------------------------------------------------------------
+AFTER FIXED STRUCTURE
+------------------------------------------------------------------------------
+
+• Subdomain document root = .../public_html/api/public
+
+• Test again:
+   https://api.darkslategrey-gazelle-896289.hostingersite.com/test.php
+
+DO NOT USE "Extract" on Windows-created .ZIP in Hostinger if it creates
+backslash names again — Use tar.gz or SSH unzip OR FileZilla.

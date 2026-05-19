@@ -1,0 +1,51 @@
+name: Deploy Laravel API to Hostinger (FTP)
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'backend_new/**'
+      - '.github/workflows/deploy-laravel-hostinger.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: hostinger-api-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, curl, ctype, json, tokenizer, bcmath, fileinfo, pdo_mysql
+          coverage: none
+
+      - name: Install Composer dependencies
+        working-directory: backend_new
+        run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+
+      - name: Deploy to Hostinger via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./backend_new/
+          server-dir: ${{ secrets.HOSTINGER_FTP_REMOTE_DIR }}
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.env
+            **/.env.*
+            **/node_modules/**
+            **/tests/**
+            **/phpunit.xml
+            **/.phpunit.result.cache

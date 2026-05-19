@@ -37,13 +37,6 @@ body {
   min-height: -webkit-fill-available;
 }
 
-@media (display-mode: standalone) {
-  body {
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-}
-
 /* App-like touch feedback (replaces default gray flash on iOS) */
 button,
 a,
@@ -144,6 +137,19 @@ a {
 .animation-delay-800 {
   animation-delay: 0.8s;
   opacity: 0;
+}
+
+/* iOS: with Reduce Motion, hero text stayed invisible (opacity: 0) */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animation-delay-200,
+  .animation-delay-400,
+  .animation-delay-600,
+  .animation-delay-800 {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 /* Gradient Shift Animation */

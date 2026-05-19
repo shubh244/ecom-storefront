@@ -1,0 +1,63 @@
+HOSTINGER SETUP — ~15 MINUTES (follow in order)
+================================================
+
+YOU NEED 2 FILES FROM YOUR PC:
+  A) furniture\backend_new-deploy.zip
+  B) furniture\backend_new\database\exports\hostinger-data.sql
+
+--- PART 1: STOREFRONT (Next.js — Git, already connected) ---
+
+1. hPanel → Websites → your site → Deployments / Git → Environment variables
+2. Add exactly:
+     NEXT_PUBLIC_SITE_URL=https://darkslategrey-gazelle-896289.hostingersite.com
+     NEXT_PUBLIC_API_URL=https://api.darkslategrey-gazelle-896289.hostingersite.com/api
+3. Click Redeploy / Deploy
+
+--- PART 2: API (Laravel — manual upload) ---
+
+4. File Manager → public_html → New Folder → name: api
+5. Upload backend_new-deploy.zip INTO api → Extract
+   CHECK: api folder must contain artisan, app, config, public (not only zip)
+6. In api folder: copy .env.hostinger.example → rename to .env
+   Edit .env:
+     DB_PASSWORD = your Hostinger MySQL password (hPanel → Databases)
+     APP_KEY = leave empty for now (step 8)
+7. Domains → Subdomains → api.darkslategrey-gazelle-896289.hostingersite.com
+   Document root MUST end with: /public_html/api/public
+
+--- PART 3: DATABASE ---
+
+8. SSH (hPanel → Advanced → SSH) OR Hostinger Terminal:
+     cd domains/darkslategrey-gazelle-896289.hostingersite.com/public_html/api
+     composer install --no-dev --optimize-autoloader
+     php artisan key:generate --force
+     php artisan migrate --force
+     php artisan storage:link
+     php artisan config:clear
+
+   NO SSH? Ask Hostinger support to run those, OR upload vendor from PC after:
+     composer install --no-dev  (on your PC in backend_new folder)
+
+9. phpMyAdmin → database u274811071_shreejee → Import (TWO files, in order):
+     FIRST:  backend_new\database\exports\hostinger-schema.sql
+     SECOND: backend_new\database\exports\hostinger-data.sql
+
+--- PART 4: TEST ---
+
+10. Browser:
+     https://api.darkslategrey-gazelle-896289.hostingersite.com/api/categories
+     → must show JSON (not 404 HTML)
+
+11. Browser:
+     https://darkslategrey-gazelle-896289.hostingersite.com
+     → products/categories should load
+
+--- IF API URL FAILS ---
+
+- 404 / directory listing → document root wrong (must be .../api/public)
+- 500 → check api/storage/logs/laravel.log on server
+- Empty shop but API OK → redeploy Next with env vars from step 2
+- Access denied DB → wrong DB_PASSWORD in api/.env
+
+--- I CANNOT LOG INTO YOUR HOSTINGER ---
+Do not share passwords in chat. Follow this list or Hostinger live chat with this file.

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import Script from 'next/script'
 import './globals.css'
 import Header from '@/components/Header'
 import AppFooter from '@/components/AppFooter'
@@ -7,9 +8,10 @@ import MobileBottomNav from '@/components/MobileBottomNav'
 import AppMain from '@/components/AppMain'
 import { CartProvider } from '@/context/CartContext'
 import { ToastProvider } from '@/context/ToastContext'
-import PwaRegister from '@/components/PwaRegister'
-import InstallAppPrompt from '@/components/InstallAppPrompt'
 import { SITE_NAME, getSiteUrl, siteSeo, organizationJsonLd, getOgImageUrl } from '@/lib/site'
+import { criticalCss } from '@/lib/criticalCss'
+import CssRecovery from '@/components/CssRecovery'
+import { inlineHeadScripts } from '@/lib/inlineHeadScripts'
 
 const siteUrl = getSiteUrl()
 
@@ -58,7 +60,6 @@ export const metadata: Metadata = {
       { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
     apple: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
-    shortcut: ['/icons/icon-192.png'],
   },
   other: {
     'geo.region': 'IN-DL',
@@ -78,6 +79,8 @@ export const viewport: Viewport = {
   themeColor: '#8B4513',
 }
 
+export const revalidate = 0
+
 export default function RootLayout({
   children,
 }: {
@@ -86,20 +89,22 @@ export default function RootLayout({
   return (
     <html lang="en-IN">
       <body className="antialiased">
+        <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
+        <Script id="css-bootstrap" strategy="beforeInteractive">
+          {inlineHeadScripts}
+        </Script>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
         <ToastProvider>
           <CartProvider>
+            <CssRecovery />
             <Header />
             <AppMain>{children}</AppMain>
             <AppFooter />
             <MobileBottomNav />
             <WhatsAppButton />
-            <InstallAppPrompt />
-            <PwaRegister />
           </CartProvider>
         </ToastProvider>
       </body>
     </html>
   )
 }
-

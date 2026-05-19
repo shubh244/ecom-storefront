@@ -1,0 +1,37 @@
+HOSTINGER SETUP — DO THESE IN ORDER
+===================================
+
+A) NEXT.JS (Git deploy — you may have done this)
+   1. Hostinger → your Next project → Environment variables
+   2. Paste from: scripts/hostinger-next-env.txt
+   3. Redeploy
+
+B) LARAVEL API (File upload)
+   1. On PC run:  scripts\pack-api-for-hostinger.ps1
+   2. Upload backend_new-deploy.zip via File Manager
+   3. Extract into: .../public_html/api/
+      (must contain app/, artisan, public/ — document root = .../api/public/)
+   4. Copy scripts/hostinger-api.env.example → .env on server
+   5. Set APP_KEY (run: php artisan key:generate) and DB_PASSWORD
+   6. SSH: bash scripts/hostinger-server.sh   (or run commands inside that file)
+
+C) DATABASE (choose one path)
+
+   PATH 1 — Import from Supabase on Windows (then optional SQL upload)
+   1. hPanel → Remote MySQL → add your PC public IP
+   2. In backend_new\.env set DB_HOST to Hostinger MySQL hostname (not 127.0.0.1)
+   3. Set IMPORT_SOURCE_DB_URL from Supabase Dashboard
+   4. Run: scripts\import-from-supabase.ps1
+   5. Remove IMPORT_SOURCE_DB_* from .env
+
+   PATH 2 — SQL file (works from Windows without Remote MySQL)
+   1. In backend_new\.env set IMPORT_SOURCE_DB_PASSWORD (Supabase)
+   2. Run: php artisan db:export-mysql-for-hostinger
+   3. On Hostinger SSH first: php artisan migrate --force
+   4. phpMyAdmin → u274811071_shreejee → Import database/exports/hostinger-data.sql
+
+D) VERIFY
+   https://api.darkslategrey-gazelle-896289.hostingersite.com/api/categories  → JSON
+   https://darkslategrey-gazelle-896289.hostingersite.com  → products load
+
+Subdomain document root MUST be: .../public_html/api/public

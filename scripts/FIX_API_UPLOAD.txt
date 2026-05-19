@@ -1,0 +1,86 @@
+FIX: Laravel in the RIGHT place (api website only)
+==================================================
+
+YOU HAVE 2 WEBSITES IN HOSTINGER — USE THE API ONE:
+
+  [A] darkslategrey-gazelle-896289.hostingersite.com     → Next.js (leave as-is)
+  [B] api.darkslategrey-gazelle-896289.hostingersite.com → Laravel goes HERE
+
+--- STEP 1: Open the API website (not the main shop) ---
+
+  hPanel → Websites → click MANAGE on:
+    api.darkslategrey-gazelle-896289.hostingersite.com
+
+--- STEP 2: File Manager for API site ---
+
+  Open File Manager. You should be inside something like:
+    domains/api.darkslategrey-gazelle-896289.hostingersite.com/public_html
+
+  DELETE default files inside public_html if any (index.html etc.) — optional but cleaner.
+
+--- STEP 3: Upload Laravel ---
+
+  On your PC, file to upload:
+    C:\Users\PC\Desktop\New folder\furniture\furniture\backend_new-deploy.zip
+
+  In API public_html:
+    1. Upload backend_new-deploy.zip
+    2. Extract (right-click → Extract)
+    3. AFTER extract, public_html must look like:
+
+       public_html/
+         artisan          ← YES
+         app/
+         bootstrap/
+         config/
+         public/
+           index.php      ← YES
+           .htaccess
+           test.php
+         routes/
+         (vendor/ after composer on server)
+
+    WRONG layouts:
+       public_html/backend_new/artisan     → move everything UP one level
+       public_html/public_html/artisan     → wrong
+       only index.php in public_html        → wrong (missing artisan)
+
+--- STEP 4: Document root for API website ---
+
+  Still on api website → Domains / Hosting settings → Document root:
+
+    public_html/public
+
+  (Must end with /public — that folder contains index.php)
+
+--- STEP 5: Create .env on server ---
+
+  In public_html (same level as artisan), create file: .env
+
+  Copy from PC: scripts/hostinger-api.env.example
+  Set:
+    DB_PASSWORD = your Hostinger MySQL password
+    APP_URL = https://api.darkslategrey-gazelle-896289.hostingersite.com
+
+  SSH then:
+    cd ~/domains/api.darkslategrey-gazelle-896289.hostingersite.com/public_html
+    (if path differs, cd to folder that contains artisan)
+
+    composer install --no-dev --optimize-autoloader
+    php artisan key:generate --force
+    php artisan config:clear
+    php artisan storage:link
+
+--- STEP 6: Database (phpMyAdmin) ---
+
+  Database: u274811071_shreejee
+  Import 1st: backend_new/database/exports/hostinger-schema.sql
+  Import 2nd: backend_new/database/exports/hostinger-data.sql
+
+--- STEP 7: Test ---
+
+  https://api.darkslategrey-gazelle-896289.hostingersite.com/test.php
+  https://api.darkslategrey-gazelle-896289.hostingersite.com/api/categories
+
+--- DO NOT put Laravel in main site public_html/api unless you use Option A document root trick.
+  For two separate Hostinger websites, API files belong under api.* public_html only.

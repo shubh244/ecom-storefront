@@ -2,29 +2,24 @@
 
 import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
-import PromoBanner from '@/components/PromoBanner'
-import CategoryBanner from '@/components/CategoryBanner'
-import StatsBanner from '@/components/StatsBanner'
-import CategorySection from '@/components/CategorySection'
+import Hero from '@/components/Hero'
 import FeaturedProducts from '@/components/FeaturedProducts'
 import TopPicks from '@/components/TopPicks'
-import BedsSection from '@/components/BedsSection'
-import SofaSection from '@/components/SofaSection'
-import HotOffers from '@/components/HotOffers'
+import LazyWhenVisible from '@/components/LazyWhenVisible'
 import { apiClient } from '@/lib/api'
 import { Category, Product } from '@/lib/types'
 
-const heroHeightClass =
-  'w-full h-[60vh] sm:h-[70vh] md:h-[80vh] lg:h-[90vh] bg-gradient-to-br from-primary/15 via-stone-100 to-secondary/15'
-
-const Hero = dynamic(() => import('@/components/Hero'), {
-  ssr: false,
-  loading: () => <div className={heroHeightClass} aria-hidden />,
-})
+const PromoBanner = dynamic(() => import('@/components/PromoBanner'), { ssr: false })
+const CategoryBanner = dynamic(() => import('@/components/CategoryBanner'), { ssr: false })
+const StatsBanner = dynamic(() => import('@/components/StatsBanner'), { ssr: false })
+const CategorySection = dynamic(() => import('@/components/CategorySection'), { ssr: false })
+const HotOffers = dynamic(() => import('@/components/HotOffers'), { ssr: false })
+const BedsSection = dynamic(() => import('@/components/BedsSection'), { ssr: false })
+const SofaSection = dynamic(() => import('@/components/SofaSection'), { ssr: false })
 
 function FeaturedSkeleton() {
   return (
-    <section className="py-12 bg-gray-50">
+    <section className="py-12 bg-gray-50" aria-busy="true" aria-label="Loading featured products">
       <div className="container mx-auto px-4">
         <div className="h-9 max-w-xs bg-gray-200 rounded mx-auto mb-8 animate-pulse" />
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
@@ -46,34 +41,29 @@ function FeaturedSkeleton() {
 export default function HomeClient() {
   const [categories, setCategories] = useState<Category[]>([])
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([])
-  const [featuredSettled, setFeaturedSettled] = useState(false)
+  const [featuredLoading, setFeaturedLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
 
-    const loadFeatured = async () => {
+    const load = async () => {
       try {
-        const featuredData = await apiClient.getFeaturedProducts()
-        if (!cancelled) setFeaturedProducts(featuredData)
+        const [featuredData, categoriesData] = await Promise.all([
+          apiClient.getFeaturedProducts(),
+          apiClient.getCategories(),
+        ])
+        if (!cancelled) {
+          setFeaturedProducts(featuredData)
+          setCategories(categoriesData)
+        }
       } catch (error) {
-        console.error('Error fetching featured products:', error)
+        console.error('Error fetching home data:', error)
       } finally {
-        if (!cancelled) setFeaturedSettled(true)
+        if (!cancelled) setFeaturedLoading(false)
       }
     }
 
-    const loadCategories = async () => {
-      try {
-        const categoriesData = await apiClient.getCategories()
-        if (!cancelled) setCategories(categoriesData)
-      } catch (error) {
-        console.error('Error fetching categories:', error)
-      }
-    }
-
-    void loadFeatured()
-    void loadCategories()
-
+    void load()
     return () => {
       cancelled = true
     }
@@ -81,20 +71,36 @@ export default function HomeClient() {
 
   return (
     <div className="overflow-x-hidden">
-      {featuredSettled ? <Hero /> : <div className={heroHeightClass} aria-hidden />}
+      <Hero />
 
-      {!featuredSettled ? <FeaturedSkeleton /> : <FeaturedProducts products={featuredProducts} />}
+      {featuredLoading ? (
+        <FeaturedSkeleton />
+      ) : (
+        <FeaturedProducts products={featuredProducts} />
+      )}
 
       <PromoBanner />
-      <HotOffers />
-      <CategoryBanner />
+
+      <LazyWhenVisible minHeight="320px">
+        <HotOffers />
+      </LazyWhenVisible>
+
+      <LazyWhenVisible minHeight="400px">
+        <CategoryBanner />
+      </LazyWhenVisible>
+
       <TopPicks categories={categories} />
       <StatsBanner />
-      <BedsSection />
-      <SofaSection />
+
+      <LazyWhenVisible minHeight="280px">
+        <BedsSection />
+      </LazyWhenVisible>
+
+      <LazyWhenVisible minHeight="280px">
+        <SofaSection />
+      </LazyWhenVisible>
+
       <CategorySection categories={categories} />
     </div>
   )
 }
-
-

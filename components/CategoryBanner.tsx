@@ -2,29 +2,30 @@
 
 import Link from 'next/link'
 import { FiArrowRight } from 'react-icons/fi'
+import { unsplash } from '@/lib/unsplash'
 
 const categories = [
   {
     name: 'Living Room',
-    image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&q=80',
+    image: unsplash('https://images.unsplash.com/photo-1555041469-a586c61ea9bc', 640),
     link: '/category/sofa-sets',
     count: '50+ Products',
   },
   {
     name: 'Bedroom',
-    image: 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&q=80',
+    image: unsplash('https://images.unsplash.com/photo-1631049307264-da0ec9d70304', 640),
     link: '/category/beds',
     count: '30+ Products',
   },
   {
     name: 'Dining Room',
-    image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&q=80',
+    image: unsplash('https://images.unsplash.com/photo-1586023492125-27b2c045efd7', 640),
     link: '/category/dining-table-sets',
     count: '25+ Products',
   },
   {
     name: 'Office',
-    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80',
+    image: unsplash('https://images.unsplash.com/photo-1497366216548-37526070297c', 640),
     link: '/office',
     count: '40+ Products',
   },
