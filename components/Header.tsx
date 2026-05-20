@@ -117,13 +117,13 @@ export default function Header() {
               {isMenuOpen ? <FiX /> : <FiMenu />}
             </button>
             <a href="/" className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <span className="flex h-9 w-9 sm:h-12 sm:w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-gray-200">
+              <span className="flex h-10 sm:h-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white px-1.5 ring-1 ring-gray-200">
                 <img
                   src={logoSrc}
                   alt={`${SITE_NAME} logo`}
-                  width={48}
+                  width={160}
                   height={48}
-                  className="h-full w-full object-contain"
+                  className="h-8 sm:h-10 w-auto max-w-[7.5rem] sm:max-w-[10rem] object-contain"
                   loading="eager"
                   decoding="async"
                   fetchPriority="high"

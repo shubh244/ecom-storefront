@@ -28,11 +28,11 @@ export function getPublicApiUrl(): string {
  * Logo image URLs to try in order (remote hosting can break after DNS moves).
  * Set NEXT_PUBLIC_LOGO_URL to a stable URL if needed.
  */
-/** Header logo — SVG only (avoids black rectangle from legacy PNG). */
+/** Header logo — PNG with white background (see public/sjbw-logo.png). */
 export function getHeaderLogoCandidates(): string[] {
   const env = process.env.NEXT_PUBLIC_LOGO_URL?.trim()
-  if (env && /\.(svg|webp)$/i.test(env)) return [env]
-  return ['/brand-mark.svg']
+  if (env) return [env]
+  return ['/sjbw-logo-sm.png', '/sjbw-logo.png']
 }
 
 export function getLogoCandidates(): string[] {
@@ -43,9 +43,8 @@ export function getLogoCandidates(): string[] {
     if (u && !ordered.includes(u)) ordered.push(u)
   }
   add(env)
-  add('/brand-mark.svg')
-  add('/sjbw-logo-sm.png')
   add('/sjbw-logo.png')
+  add('/sjbw-logo-sm.png')
   add(`${site}/sjbw-logo-sm.png`)
   add(`${site}/sjbw-logo.png`)
   add('https://www.shreejeeblessingwood.in/sjbw-logo.png')
