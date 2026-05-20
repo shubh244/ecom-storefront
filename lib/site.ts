@@ -28,7 +28,7 @@ export function getPublicApiUrl(): string {
  * Logo image URLs to try in order (remote hosting can break after DNS moves).
  * Set NEXT_PUBLIC_LOGO_URL to a stable URL if needed.
  */
-/** Header logo — PNG with white background (see public/sjbw-logo.png). */
+/** Header logo — transparent PNG; white comes from Header bg-white. */
 export function getHeaderLogoCandidates(): string[] {
   const env = process.env.NEXT_PUBLIC_LOGO_URL?.trim()
   if (env) return [env]
