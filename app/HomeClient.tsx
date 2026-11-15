@@ -17,6 +17,19 @@ const HotOffers = dynamic(() => import('@/components/HotOffers'), { ssr: false }
 const BedsSection = dynamic(() => import('@/components/BedsSection'), { ssr: false })
 const SofaSection = dynamic(() => import('@/components/SofaSection'), { ssr: false })
 
+function readProducts(result: unknown): Product[] {
+  if (Array.isArray(result)) return result
+  if (
+    result &&
+    typeof result === 'object' &&
+    'data' in result &&
+    Array.isArray((result as { data: unknown }).data)
+  ) {
+    return (result as { data: Product[] }).data
+  }
+  return []
+}
+
 function FeaturedSkeleton() {
   return (
     <section className="py-12 bg-gray-50" aria-busy="true" aria-label="Loading featured products">
@@ -48,12 +61,13 @@ export default function HomeClient() {
 
     const load = async () => {
       try {
-        const [featuredData, categoriesData] = await Promise.all([
-          apiClient.getFeaturedProducts(),
+        const [productResult, categoriesData] = await Promise.all([
+          apiClient.getProducts({ per_page: 120, sort_by: 'created_at', sort_order: 'desc' }),
           apiClient.getCategories(),
         ])
         if (!cancelled) {
-          setFeaturedProducts(featuredData)
+          const newest = readProducts(productResult).sort((a, b) => Number(b.id) - Number(a.id))
+          setFeaturedProducts(newest.slice(0, 120))
           setCategories(categoriesData)
         }
       } catch (error) {
@@ -76,7 +90,11 @@ export default function HomeClient() {
       {featuredLoading ? (
         <FeaturedSkeleton />
       ) : (
-        <FeaturedProducts products={featuredProducts} />
+        <FeaturedProducts
+          products={featuredProducts}
+          title="Latest products"
+          subtitle={`${featuredProducts.length} products, newest first. Open Shop for the full catalogue.`}
+        />
       )}
 
       <PromoBanner />
