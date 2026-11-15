@@ -13,7 +13,8 @@ export default function SofaSection() {
     const fetchSofas = async () => {
       try {
         const products = await apiClient.getProductsByCategory('sofa-sets')
-        setSofas(products.slice(0, 6))
+        const newest = [...products].sort((a, b) => Number(b.id) - Number(a.id))
+        setSofas(newest.slice(0, 6))
       } catch (error) {
         console.error('Error fetching sofas:', error)
       } finally {
