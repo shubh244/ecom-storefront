@@ -89,16 +89,30 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   return (
     <div className="py-4 sm:py-8 pb-36 md:pb-8">
       <div className="container mx-auto px-3 sm:px-4">
+        <nav aria-label="Breadcrumb" className="text-sm text-gray-600 mb-4">
+          <ol className="flex flex-wrap items-center gap-1">
+            <li><Link href="/" className="hover:text-primary">Home</Link></li>
+            {product.category?.slug && (
+              <li>
+                <span aria-hidden="true"> / </span>
+                <Link href={`/category/${product.category.slug}`} className="hover:text-primary">
+                  {product.category.name}
+                </Link>
+              </li>
+            )}
+            <li>
+              <span aria-hidden="true"> / </span>
+              <span className="text-gray-900">{product.name}</span>
+            </li>
+          </ol>
+        </nav>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
           {/* Product Image */}
           <div className="bg-gray-100 rounded-xl sm:rounded-lg aspect-square flex items-center justify-center overflow-hidden -mx-1 sm:mx-0">
-            <div
-              className="w-full h-full bg-cover bg-center rounded-lg"
-              style={{
-                backgroundImage: `url(${productImage})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }}
+            <img
+              src={productImage}
+              alt={product.name}
+              className="w-full h-full object-cover rounded-lg"
             />
           </div>
 

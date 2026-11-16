@@ -100,6 +100,54 @@ export function buildProductMetaDescription(productName: string, excerpt?: strin
   return base
 }
 
+export function breadcrumbJsonLd(items: { name: string; url: string }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  }
+}
+
+export function productJsonLd(product: {
+  name: string
+  description?: string | null
+  image?: string | null
+  price?: number | string | null
+  in_stock?: boolean
+}, id: string) {
+  const pageUrl = `${getSiteUrl()}/product/${id}`
+  const image = product.image?.startsWith('http')
+    ? product.image
+    : product.image?.startsWith('/')
+      ? `${getPublicApiUrl().replace(/\/api\/?$/, '')}${product.image}`
+      : getOgImageUrl()
+  const price = Number(product.price)
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: buildProductMetaDescription(product.name, product.description),
+    image,
+    sku: id,
+    brand: { '@type': 'Brand', name: SITE_NAME },
+    offers: {
+      '@type': 'Offer',
+      url: pageUrl,
+      priceCurrency: 'INR',
+      ...(Number.isFinite(price) ? { price: price.toFixed(2) } : {}),
+      availability: product.in_stock === false
+        ? 'https://schema.org/OutOfStock'
+        : 'https://schema.org/InStock',
+      seller: { '@id': `${getSiteUrl()}/#organization` },
+    },
+  }
+}
+
 export function organizationJsonLd() {
   const url = getSiteUrl()
   return {

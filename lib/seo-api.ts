@@ -4,6 +4,9 @@ type ProductMeta = {
   name: string
   description?: string | null
   image?: string | null
+  price?: number | string | null
+  in_stock?: boolean
+  category?: { name?: string; slug?: string } | null
 }
 
 type CategoryMeta = { name: string; slug: string }

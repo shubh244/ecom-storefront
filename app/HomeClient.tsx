@@ -5,41 +5,18 @@ import dynamic from 'next/dynamic'
 import Hero from '@/components/Hero'
 import FeaturedProducts from '@/components/FeaturedProducts'
 import TopPicks from '@/components/TopPicks'
-import LazyWhenVisible from '@/components/LazyWhenVisible'
 import { apiClient } from '@/lib/api'
+import { pickShowcase } from '@/lib/homeShowcase'
 import { Category, Product } from '@/lib/types'
 
 const PromoBanner = dynamic(() => import('@/components/PromoBanner'), { ssr: false })
-const CategoryBanner = dynamic(() => import('@/components/CategoryBanner'), { ssr: false })
 const StatsBanner = dynamic(() => import('@/components/StatsBanner'), { ssr: false })
-const CategorySection = dynamic(() => import('@/components/CategorySection'), { ssr: false })
 
-function readProducts(result: unknown): Product[] {
-  if (Array.isArray(result)) return result
-  if (
-    result &&
-    typeof result === 'object' &&
-    'data' in result &&
-    Array.isArray((result as { data: unknown }).data)
-  ) {
-    return (result as { data: Product[] }).data
-  }
-  return []
-}
-
-function isCatalogPhoto(product: Product): boolean {
-  const image = product.image || ''
-  return (
-    image.startsWith('/') ||
-    (image.startsWith('http') && !image.includes('unsplash.com') && !image.includes('picsum.photos'))
-  )
-}
-
-function pickShowcase(result: unknown, limit = 10): Product[] {
-  const products = readProducts(result)
-  const catalog = products.filter(isCatalogPhoto)
-  const others = products.filter((product) => !isCatalogPhoto(product))
-  return [...catalog, ...others].slice(0, limit)
+interface HomeClientProps {
+  initialSofas?: Product[]
+  initialDining?: Product[]
+  initialBeds?: Product[]
+  initialCategories?: Category[]
 }
 
 function FeaturedSkeleton() {
@@ -63,12 +40,19 @@ function FeaturedSkeleton() {
   )
 }
 
-export default function HomeClient() {
-  const [categories, setCategories] = useState<Category[]>([])
-  const [sofas, setSofas] = useState<Product[]>([])
-  const [dining, setDining] = useState<Product[]>([])
-  const [beds, setBeds] = useState<Product[]>([])
-  const [featuredLoading, setFeaturedLoading] = useState(true)
+export default function HomeClient({
+  initialSofas = [],
+  initialDining = [],
+  initialBeds = [],
+  initialCategories = [],
+}: HomeClientProps) {
+  const [categories, setCategories] = useState<Category[]>(initialCategories)
+  const [sofas, setSofas] = useState<Product[]>(initialSofas)
+  const [dining, setDining] = useState<Product[]>(initialDining)
+  const [beds, setBeds] = useState<Product[]>(initialBeds)
+  const [featuredLoading, setFeaturedLoading] = useState(
+    initialSofas.length + initialDining.length + initialBeds.length === 0
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -133,15 +117,8 @@ export default function HomeClient() {
       )}
 
       <PromoBanner />
-
-      <LazyWhenVisible minHeight="400px">
-        <CategoryBanner />
-      </LazyWhenVisible>
-
       <TopPicks categories={categories} />
       <StatsBanner />
-
-      <CategorySection categories={categories} />
     </div>
   )
 }

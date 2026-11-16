@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import HomeClient from './HomeClient'
+import { fetchHomeShowcase } from '@/lib/homeShowcase'
 import { SITE_NAME, getSiteUrl, siteSeo, getOgImageUrl } from '@/lib/site'
 
 const siteUrl = getSiteUrl()
@@ -29,6 +30,30 @@ export const metadata: Metadata = {
   },
 }
 
-export default function HomePage() {
-  return <HomeClient />
+export default async function HomePage() {
+  const showcase = await fetchHomeShowcase()
+  const listed = [...showcase.sofas, ...showcase.dining, ...showcase.beds]
+  const itemList = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Furniture highlights',
+    itemListElement: listed.map((product, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: product.name,
+      url: `${siteUrl}/product/${product.id}`,
+    })),
+  }
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }} />
+      <HomeClient
+        initialSofas={showcase.sofas}
+        initialDining={showcase.dining}
+        initialBeds={showcase.beds}
+        initialCategories={showcase.categories}
+      />
+    </>
+  )
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { SITE_NAME, getSiteUrl, siteSeo, buildProductMetaDescription, getOgImageUrl } from '@/lib/site'
+import { SITE_NAME, getSiteUrl, siteSeo, buildProductMetaDescription, getOgImageUrl, productJsonLd, breadcrumbJsonLd } from '@/lib/site'
 import { fetchProductForMeta } from '@/lib/seo-api'
 
 type Props = { children: React.ReactNode; params: { id: string } }
@@ -43,6 +43,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default function ProductLayout({ children }: { children: React.ReactNode }) {
-  return children
+export default async function ProductLayout({ children, params }: Props) {
+  const product = await fetchProductForMeta(params.id)
+  const siteUrl = getSiteUrl()
+  const pageUrl = `${siteUrl}/product/${params.id}`
+  const crumbs = [
+    { name: 'Home', url: siteUrl },
+    ...(product?.category?.name && product.category.slug
+      ? [{ name: product.category.name, url: `${siteUrl}/category/${product.category.slug}` }]
+      : []),
+    { name: product?.name || 'Product', url: pageUrl },
+  ]
+  const blocks = [
+    breadcrumbJsonLd(crumbs),
+    ...(product?.name ? [productJsonLd(product, params.id)] : []),
+  ]
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(blocks) }} />
+      {children}
+    </>
+  )
 }

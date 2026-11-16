@@ -50,15 +50,11 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Product Image */}
       <div className="relative aspect-square bg-gray-100 overflow-hidden">
         <Link href={`/product/${product.id}`}>
-          <div
-            className="w-full h-full bg-cover bg-center group-hover:scale-110 transition duration-300 cursor-pointer"
-            style={{
-              backgroundImage: `url(${productImage})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center'
-            }}
-          >
-          </div>
+          <img
+            src={productImage}
+            alt={product.name}
+            className="w-full h-full object-cover group-hover:scale-110 transition duration-300 cursor-pointer"
+          />
         </Link>
         
         {/* Badges */}

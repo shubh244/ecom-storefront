@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { SITE_NAME, getSiteUrl, siteSeo, getOgImageUrl } from '@/lib/site'
+import { SITE_NAME, getSiteUrl, siteSeo, getOgImageUrl, breadcrumbJsonLd } from '@/lib/site'
 import { fetchCategoryBySlugForMeta } from '@/lib/seo-api'
 
 type Props = { children: React.ReactNode; params: { slug: string } }
@@ -42,6 +42,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default function CategoryLayout({ children }: { children: React.ReactNode }) {
-  return children
+export default async function CategoryLayout({ children, params }: Props) {
+  const category = await fetchCategoryBySlugForMeta(params.slug)
+  const siteUrl = getSiteUrl()
+  const label = category?.name ?? titleCaseSlug(params.slug)
+  const jsonLd = breadcrumbJsonLd([
+    { name: 'Home', url: siteUrl },
+    { name: label, url: `${siteUrl}/category/${params.slug}` },
+  ])
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {children}
+    </>
+  )
 }
