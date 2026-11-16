@@ -13,9 +13,6 @@ const PromoBanner = dynamic(() => import('@/components/PromoBanner'), { ssr: fal
 const CategoryBanner = dynamic(() => import('@/components/CategoryBanner'), { ssr: false })
 const StatsBanner = dynamic(() => import('@/components/StatsBanner'), { ssr: false })
 const CategorySection = dynamic(() => import('@/components/CategorySection'), { ssr: false })
-const HotOffers = dynamic(() => import('@/components/HotOffers'), { ssr: false })
-const BedsSection = dynamic(() => import('@/components/BedsSection'), { ssr: false })
-const SofaSection = dynamic(() => import('@/components/SofaSection'), { ssr: false })
 
 function readProducts(result: unknown): Product[] {
   if (Array.isArray(result)) return result
@@ -30,13 +27,28 @@ function readProducts(result: unknown): Product[] {
   return []
 }
 
+function isCatalogPhoto(product: Product): boolean {
+  const image = product.image || ''
+  return (
+    image.startsWith('/') ||
+    (image.startsWith('http') && !image.includes('unsplash.com') && !image.includes('picsum.photos'))
+  )
+}
+
+function pickShowcase(result: unknown, limit = 10): Product[] {
+  const products = readProducts(result)
+  const catalog = products.filter(isCatalogPhoto)
+  const others = products.filter((product) => !isCatalogPhoto(product))
+  return [...catalog, ...others].slice(0, limit)
+}
+
 function FeaturedSkeleton() {
   return (
     <section className="py-12 bg-gray-50" aria-busy="true" aria-label="Loading featured products">
       <div className="container mx-auto px-4">
         <div className="h-9 max-w-xs bg-gray-200 rounded mx-auto mb-8 animate-pulse" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
+          {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="bg-white rounded-lg shadow overflow-hidden">
               <div className="aspect-square bg-gray-200 animate-pulse" />
               <div className="p-3 space-y-2">
@@ -53,7 +65,9 @@ function FeaturedSkeleton() {
 
 export default function HomeClient() {
   const [categories, setCategories] = useState<Category[]>([])
-  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([])
+  const [sofas, setSofas] = useState<Product[]>([])
+  const [dining, setDining] = useState<Product[]>([])
+  const [beds, setBeds] = useState<Product[]>([])
   const [featuredLoading, setFeaturedLoading] = useState(true)
 
   useEffect(() => {
@@ -61,13 +75,16 @@ export default function HomeClient() {
 
     const load = async () => {
       try {
-        const [productResult, categoriesData] = await Promise.all([
-          apiClient.getProducts({ per_page: 120, sort_by: 'created_at', sort_order: 'desc' }),
+        const [sofaResult, diningResult, bedResult, categoriesData] = await Promise.all([
+          apiClient.getProducts({ category: '1', per_page: 10, sort_by: 'id', sort_order: 'desc' }),
+          apiClient.getProducts({ category: '2', per_page: 10, sort_by: 'id', sort_order: 'desc' }),
+          apiClient.getProducts({ category: '3', per_page: 10, sort_by: 'id', sort_order: 'desc' }),
           apiClient.getCategories(),
         ])
         if (!cancelled) {
-          const newest = readProducts(productResult).sort((a, b) => Number(b.id) - Number(a.id))
-          setFeaturedProducts(newest.slice(0, 120))
+          setSofas(pickShowcase(sofaResult))
+          setDining(pickShowcase(diningResult))
+          setBeds(pickShowcase(bedResult))
           setCategories(categoriesData)
         }
       } catch (error) {
@@ -90,18 +107,32 @@ export default function HomeClient() {
       {featuredLoading ? (
         <FeaturedSkeleton />
       ) : (
-        <FeaturedProducts
-          products={featuredProducts}
-          title="Latest products"
-          subtitle={`${featuredProducts.length} products, newest first. Open Shop for the full catalogue.`}
-        />
+        <>
+          <FeaturedProducts
+            products={sofas}
+            title="Sofa Sets"
+            subtitle={`${sofas.length} sofa sets. The rest of the range is in the category.`}
+            viewAllHref="/category/sofa-sets"
+            viewAllLabel="View all sofa sets"
+          />
+          <FeaturedProducts
+            products={dining}
+            title="Dining Tables"
+            subtitle={`${dining.length} dining tables. The rest of the range is in the category.`}
+            viewAllHref="/category/dining-table-sets"
+            viewAllLabel="View all dining tables"
+          />
+          <FeaturedProducts
+            products={beds}
+            title="Beds"
+            subtitle={`${beds.length} beds. The rest of the range is in the category.`}
+            viewAllHref="/category/beds"
+            viewAllLabel="View all beds"
+          />
+        </>
       )}
 
       <PromoBanner />
-
-      <LazyWhenVisible minHeight="320px">
-        <HotOffers />
-      </LazyWhenVisible>
 
       <LazyWhenVisible minHeight="400px">
         <CategoryBanner />
@@ -109,14 +140,6 @@ export default function HomeClient() {
 
       <TopPicks categories={categories} />
       <StatsBanner />
-
-      <LazyWhenVisible minHeight="280px">
-        <BedsSection />
-      </LazyWhenVisible>
-
-      <LazyWhenVisible minHeight="280px">
-        <SofaSection />
-      </LazyWhenVisible>
 
       <CategorySection categories={categories} />
     </div>
